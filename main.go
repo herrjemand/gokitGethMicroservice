@@ -21,10 +21,7 @@ import (
 const gethUrl string = "http://localhost:8545"
 var wg sync.WaitGroup
 
-// StringService provides operations on strings.
 type EthService interface {
-    // Uppercase(string) (string, error)
-    // Count(string) int
     GetSyncStatus() (interface{}, error)
     GetTransactions(string) (interface{}, error)
 }
@@ -216,22 +213,6 @@ type addressResponse struct {
 
 /* ----- INTERFACE IMPLEMENTORS ENDS ----- */
 
-// func makeCountEndpoint(svc StringService) endpoint.Endpoint {
-//     return func(_ context.Context, request interface{}) (interface{}, error) {
-//         req := request.(countRequest)
-//         v := svc.Count(req.S)
-//         return countResponse{v}, nil
-//     }
-// }
-
-
-// func getAddressBack(svc EthService) endpoint.Endpoint {
-//     return func(_ context.Context, request interface{}) (interface{}, error) {
-//         req := request.(string)
-//         // v := svc.GerAddressBack(req)
-//         return addressResponse{v}, nil
-//     }
-// }
 
 func getSyncStatusConstr(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
