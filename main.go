@@ -11,7 +11,6 @@ import (
     "io/ioutil"
     "net/http"
     "sync"
-    // "strings"
     "strconv"
     "github.com/go-kit/kit/endpoint"
     "github.com/gorilla/mux"
