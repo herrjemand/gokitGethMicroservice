@@ -120,7 +120,8 @@ type ethServiceImp struct{}
 var ErrConnectingToGeth = errors.New("Error connecting to geth!")
 var ErrReadingGethResponse = errors.New("Error reading response from Geth!")
 var ErrParsingJSON = errors.New("Error while parsing JSON!")
-var ErrParsingInt = errors.New("Error while parsing JSON!")
+var ErrParsingInt = errors.New("Error while parsing Int!")
+var ErrNullResult = errors.New("Error! Geth returned NULL result!")
 
 func (ethServiceImp) GetSyncStatus() (interface{}, error) {
     rpcReq := EthRPCRequest{}
@@ -151,22 +152,25 @@ func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
         return nil, ErrParsingJSON
     }
 
-    fmt.Println(txCountStruct.Result)
+    if txCountStruct.Result == "" {
+        return nil, ErrNullResult
+    }
     
-    txCount, _ := strconv.ParseInt(txCountStruct.Result, 0, 16)
+    var txCount int64;
+    txCount, err = strconv.ParseInt(txCountStruct.Result, 0, 16)
     if err != nil {
         return nil, ErrParsingInt
     }
 
-    txChannel := make(chan TxChannelResult)
+    txChannel := make(chan TxChannelResult, txCount)
     for i := 0; i < int(txCount); i++ {
+        inji := i
         wg.Add(1)
         go func() {
             defer wg.Done()
             rpcReq := EthRPCRequest{}
 
-            // Getting transaction count
-            rpcReq.constructGetTransactionByBlockHashAndIndexRequest(blockHash, int64(i))
+            rpcReq.constructGetTransactionByBlockHashAndIndexRequest(blockHash, int64(inji))
             txBlockCountResp, err := callGethRPC(rpcReq)
             if err != nil {
                 txChannel <- TxChannelResult{Transaction{}, err}
@@ -176,11 +180,20 @@ func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
             err = json.Unmarshal(txBlockCountResp.([]byte), &txBlockCountRespStruct)
             if err != nil {
                 txChannel <- TxChannelResult{Transaction{}, err}
+                return
+            }
+
+            if txBlockCountRespStruct.Result == (Transaction{}) {
+                txChannel <- TxChannelResult{Transaction{}, ErrNullResult}
+                return
             }
 
             txChannel <- TxChannelResult{txBlockCountRespStruct.Result, nil}
         }()
     }
+
+    wg.Wait()
+    close(txChannel)
 
     var txs []Transaction = []Transaction{}
     for txResult := range txChannel {
@@ -189,9 +202,6 @@ func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
         }
         txs = append(txs, txResult.Tx)
     }
-
-    wg.Wait()
-    close(txChannel)
 
     txResponse := TransactionResultsResponse{txs}
 
