@@ -66,6 +66,18 @@ type TransactionResult struct {
     Id int32 `json:"id"`
 }
 
+type BlockSyncProgress struct {
+    StartingBlock string `json:"startingBlock"`
+    CurrentBlock string `json:"currentBlock"`
+    HighestBlock string `json:"highestBlock"`
+}
+
+type GetSyncResult struct {
+    Jsonrpc string `json:"jsonrpc"`
+    Result BlockSyncProgress `json:"result"`
+    Id int32 `json:"id"`
+}
+
 type TransactionResultsResponse struct {
     Transactions []Transaction `json:"transactions"`
 }
@@ -74,7 +86,6 @@ type TxChannelResult struct {
     Tx Transaction
     Error error
 }
-
 
 func (ethreq *EthRPCRequest) constructGetSyncingRequest() {
     ethreq.Jsonrpc = "2.0"
@@ -96,6 +107,10 @@ func (ethreq *EthRPCRequest) constructGetTransactionByBlockHashAndIndexRequest(b
     ethreq.Method = "eth_getTransactionByBlockHashAndIndex"
     ethreq.Params = []string{blockHash, trInx}
     ethreq.Id = 0x01
+}
+
+func generateErrorResponse(errorMessage string) ([]byte) {
+    return []byte("{\"status\":\"error\", \"errorMessage\":\"" + errorMessage + "\"}")
 }
 
 func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
@@ -126,6 +141,7 @@ type ethServiceImp struct{}
 var ErrConnectingToGeth = errors.New("Error connecting to geth!")
 var ErrReadingGethResponse = errors.New("Error reading response from Geth!")
 var ErrParsingJSON = errors.New("Error while parsing JSON!")
+var ErrEncodingJSON = errors.New("Error while encoding JSON!")
 var ErrParsingInt = errors.New("Error while parsing Int!")
 var ErrNullResult = errors.New("Error! Geth returned NULL result!")
 
@@ -138,8 +154,15 @@ func (ethServiceImp) GetSyncStatus() (interface{}, error) {
     if err != nil {
         return nil, err
     }
+
+    var getSyncResp GetSyncResult;
+    err = json.Unmarshal(resp.([]byte), &getSyncResp)
+    if err != nil {
+        return nil, ErrParsingJSON
+    }
+
     
-    return resp, nil
+    return getSyncResp.Result, nil
 }
 
 func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
@@ -211,13 +234,7 @@ func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
 
     txResponse := TransactionResultsResponse{txs}
 
-    var jsonData []byte
-    jsonData, err = json.Marshal(txResponse)
-    if err != nil {
-        return nil, ErrParsingJSON
-    }
-
-    return jsonData, nil
+    return txResponse, nil
 }
 
 type addressResponse struct {
@@ -227,12 +244,18 @@ type addressResponse struct {
 
 func constructGetBlockHashTxsEndpoint(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
-        resp, err := svc.GetTransactions(request.(string))
+        result, err := svc.GetTransactions(request.(string))
         if err != nil {
-            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + err.Error() + "\"}"), nil
+            return generateErrorResponse(err.Error()), nil
         }
 
-        return resp, nil
+        var jsonData []byte
+        jsonData, err = json.Marshal(result.(TransactionResultsResponse))
+        if err != nil {
+            return generateErrorResponse(ErrEncodingJSON.Error()), nil
+        }
+
+        return jsonData, nil
     }
 }
 
@@ -248,15 +271,20 @@ func decodeBlockHashTxsResponse(_ context.Context, w http.ResponseWriter, respon
     return err
 }
 
-
 func constructGetSyncStatusEndpoint(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
-        resp, err := svc.GetSyncStatus()
+        result, err := svc.GetSyncStatus()
         if err != nil {
-            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + err.Error() + "\"}"), nil
+            return generateErrorResponse(err.Error()), nil
         }
 
-        return resp, nil
+        var jsonData []byte
+        jsonData, err = json.Marshal(result.(BlockSyncProgress))
+        if err != nil {
+            return generateErrorResponse(ErrEncodingJSON.Error()), nil
+        }
+
+        return jsonData, nil
     }
 }
 
@@ -291,7 +319,6 @@ func main() {
     router.Methods("GET").PathPrefix("/getBlockHashTransactions/{blockHash}").Handler(addressHandler)
     router.Methods("GET").PathPrefix("/getSyncStatus/").Handler(getSyncHandler)
         
-
     server := &http.Server{
         Handler:      router,
         Addr:         serverAddress + ":" + serverPort,
@@ -300,6 +327,6 @@ func main() {
         ReadTimeout:  15 * time.Second,
     }
 
-    log.Println("Starting server at " + serverAddress + ":" + serverPort + "...")
+    log.Println("Starting HTTP server at " + serverAddress + ":" + serverPort + "...")
     log.Fatal(server.ListenAndServe())
 }
