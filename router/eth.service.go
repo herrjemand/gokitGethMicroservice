@@ -3,7 +3,6 @@ package router
 import (
     "encoding/json"
     "log"
-    "fmt"
     "bytes"
     "io/ioutil"
     "net/http"
@@ -104,7 +103,6 @@ func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
 
     log.Println("Sending GethRPC request on address \"" + gethUrl + "\" with payload: " + string(jsonData))
 
-    fmt.Println("JSON Request", string(jsonData))
     resp, err := http.Post(gethUrl, "application/json", bytes.NewBuffer(jsonData))
     if err != nil {
         return nil, ErrConnectingToGeth
@@ -116,7 +114,7 @@ func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
     }
     resp.Body.Close()
 
-    fmt.Println("GOt response from GethRPC with JSON payload: ", string(respBytes))
+    log.Println("Got response from GethRPC with JSON payload: ", string(respBytes))
     return respBytes, nil
 }
 
