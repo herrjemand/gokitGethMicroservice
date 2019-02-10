@@ -18,6 +18,10 @@ import (
 )
 
 const gethUrl string = "http://localhost:8545"
+const serverAddress string = "127.0.0.1"
+const serverPort string = "8000"
+
+
 var wg sync.WaitGroup
 
 type EthService interface {
@@ -98,7 +102,7 @@ func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
     var jsonData []byte
     jsonData, err := json.Marshal(rpcStruct)
 
-    log.Debug("Sending GethRPC request on address \"" + gethUrl + "\" with payload: " + string(jsonData))
+    log.Println("Sending GethRPC request on address \"" + gethUrl + "\" with payload: " + string(jsonData))
 
     fmt.Println("JSON Request", string(jsonData))
     resp, err := http.Post(gethUrl, "application/json", bytes.NewBuffer(jsonData))
@@ -225,7 +229,7 @@ func constructGetBlockHashTxsEndpoint(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
         resp, err := svc.GetTransactions(request.(string))
         if err != nil {
-            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + string(err) + "\"}"), nil
+            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + err.Error() + "\"}"), nil
         }
 
         return resp, nil
@@ -234,12 +238,12 @@ func constructGetBlockHashTxsEndpoint(svc EthService) endpoint.Endpoint {
 
 func decodeBlockHashTxsRequest(_ context.Context, r *http.Request) (interface{}, error){
     vars := mux.Vars(r)
-    log.Debug("Receiving GetBlockHashTxs Request for Hash: " + vars["blockHash"])
+    log.Println("Receiving GetBlockHashTxs Request for Hash: " + vars["blockHash"])
     return vars["blockHash"], nil
 }
 
 func decodeBlockHashTxsResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-    log.Debug("Sending GetBlockHashTxs Response: " + string(response.([]byte)))
+    log.Println("Sending GetBlockHashTxs Response: " + string(response.([]byte)))
     _, err := w.Write(response.([]byte))
     return err
 }
@@ -249,7 +253,7 @@ func constructGetSyncStatusEndpoint(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
         resp, err := svc.GetSyncStatus()
         if err != nil {
-            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + string(err) + "\"}"), nil
+            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + err.Error() + "\"}"), nil
         }
 
         return resp, nil
@@ -257,12 +261,12 @@ func constructGetSyncStatusEndpoint(svc EthService) endpoint.Endpoint {
 }
 
 func decodeGetSyncRequest(_ context.Context, r *http.Request) (interface{}, error){
-    log.Debug("Receiving GetSync Request")
+    log.Println("Receiving GetSync Request")
     return true, nil
 }
 
 func encodeGetSyncResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-    log.Debug("Sending GetSync Response: " + string(response.([]byte)))
+    log.Println("Sending GetSync Response: " + string(response.([]byte)))
     _, err := w.Write(response.([]byte))
     return err
 }
@@ -290,11 +294,12 @@ func main() {
 
     server := &http.Server{
         Handler:      router,
-        Addr:         "127.0.0.1:8000",
+        Addr:         serverAddress + ":" + serverPort,
 
         WriteTimeout: 15 * time.Second,
         ReadTimeout:  15 * time.Second,
     }
 
+    log.Println("Starting server at " + serverAddress + ":" + serverPort + "...")
     log.Fatal(server.ListenAndServe())
 }
