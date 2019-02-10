@@ -47,7 +47,7 @@ type Transaction struct {
     GasPrice string `json:"gasPrice"`
     Hash string `json:"hash"`
     Input string `json:"input"`
-    nonce string `json:"nonce"`
+    Nonce string `json:"nonce"`
     To string `json:"to"`
     TransactionIndex string `json:"transactionIndex"`
     Value string `json:"value"`
@@ -98,6 +98,8 @@ func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
     var jsonData []byte
     jsonData, err := json.Marshal(rpcStruct)
 
+    log.Debug("Sending GethRPC request on address \"" + gethUrl + "\" with payload: " + string(jsonData))
+
     fmt.Println("JSON Request", string(jsonData))
     resp, err := http.Post(gethUrl, "application/json", bytes.NewBuffer(jsonData))
     if err != nil {
@@ -110,7 +112,7 @@ func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
     }
     resp.Body.Close()
 
-    fmt.Println("JSON Response", string(respBytes))
+    fmt.Println("GOt response from GethRPC with JSON payload: ", string(respBytes))
     return respBytes, nil
 }
 
@@ -218,8 +220,6 @@ type addressResponse struct {
     A string `json:"address"`
 }
 
-
-
 /* ----- INTERFACE IMPLEMENTORS ENDS ----- */
 
 
@@ -235,7 +235,7 @@ func getSyncStatusConstr(svc EthService) endpoint.Endpoint {
 }
 
 
-func getTransactionsConstr(svc EthService) endpoint.Endpoint {
+func getBlockHashTxsConstr(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
         resp, err := svc.GetTransactions(request.(string))
         if err != nil {
@@ -251,19 +251,19 @@ func main() {
     svc := ethServiceImp{}
 
     addressHandler := httptransport.NewServer(
-        getTransactionsConstr(svc),
-        decodeAddressRequest,
-        encodeTransactionsResponse,
+        getBlockHashTxsConstr(svc),
+        decodeBlockHashTxsRequest,
+        decodeBlockHashTxsResponse,
     )
 
     getSyncHandler := httptransport.NewServer(
         getSyncStatusConstr(svc),
         decodeGetSyncRequest,
-        encodeResponseGetSync,
+        encodeGetSyncResponse,
     )
 
     router := mux.NewRouter()
-    router.Methods("GET").PathPrefix("/getBlockAddressTransactions/{blockHash}").Handler(addressHandler)
+    router.Methods("GET").PathPrefix("/getBlockHashTransactions/{blockHash}").Handler(addressHandler)
     router.Methods("GET").PathPrefix("/getSyncStatus/").Handler(getSyncHandler)
         
 
@@ -278,26 +278,25 @@ func main() {
     log.Fatal(server.ListenAndServe())
 }
 
-func decodeAddressRequest(_ context.Context, r *http.Request) (interface{}, error){
+func decodeBlockHashTxsRequest(_ context.Context, r *http.Request) (interface{}, error){
     vars := mux.Vars(r)
-    fmt.Println("BlockHash: ", vars["blockHash"])
+    log.Debug("Receiving GetBlockHashTxs Request for Hash: " + vars["blockHash"])
     return vars["blockHash"], nil
 }
 
-func decodeGetSyncRequest(_ context.Context, r *http.Request) (interface{}, error){
-    return true, nil
-}
-
-func encodeResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-    return json.NewEncoder(w).Encode(response)
-}
-
-func encodeTransactionsResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func decodeBlockHashTxsResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+    log.Debug("Sending GetBlockHashTxs Response: " + string(response.([]byte)))
     _, err := w.Write(response.([]byte))
     return err
 }
 
-func encodeResponseGetSync(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func decodeGetSyncRequest(_ context.Context, r *http.Request) (interface{}, error){
+    log.Debug("Receiving GetSync Request")
+    return true, nil
+}
+
+func encodeGetSyncResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+    log.Debug("Sending GetSync Response: " + string(response.([]byte)))
     _, err := w.Write(response.([]byte))
     return err
 }
