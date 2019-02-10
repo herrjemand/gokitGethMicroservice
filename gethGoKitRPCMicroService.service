@@ -1,0 +1,13 @@
+[Unit]
+Description=Geth Go-kit RPC MS
+After=network.target
+StartLimitIntervalSec=0
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=gouser
+ExecStart=/usr/bin/env go run ~/go/src/gokitGethMicroservice/main.go
+
+[Install]
+WantedBy=multi-user.target
