@@ -71,7 +71,7 @@ func encodeGetSyncResponse(_ context.Context, w http.ResponseWriter, response in
     return err
 }
 
-func GenerateRouter() interface{} {
+func GenerateHTTPRouter() interface{} {
     svc := ethServiceImp{}
 
     addressHandler := httptransport.NewServer(
