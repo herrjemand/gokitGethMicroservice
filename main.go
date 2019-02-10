@@ -5,7 +5,7 @@ import (
     "time"
     "net/http"
     // "google.golang.org/grpc"
-    "taurusgroup.ch/router"
+    "github.com/herrjemand/gethGoKitRPCMicroService/router"
 )
 
 const httpServerAddress string = "127.0.0.1"
