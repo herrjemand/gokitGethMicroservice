@@ -219,31 +219,52 @@ func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
 type addressResponse struct {
     A string `json:"address"`
 }
-
 /* ----- INTERFACE IMPLEMENTORS ENDS ----- */
 
-
-func getSyncStatusConstr(svc EthService) endpoint.Endpoint {
+func constructGetBlockHashTxsEndpoint(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
-        resp, err := svc.GetSyncStatus()
+        resp, err := svc.GetTransactions(request.(string))
         if err != nil {
-            return nil, err
+            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + string(err) + "\"}"), nil
         }
 
         return resp, nil
     }
 }
 
+func decodeBlockHashTxsRequest(_ context.Context, r *http.Request) (interface{}, error){
+    vars := mux.Vars(r)
+    log.Debug("Receiving GetBlockHashTxs Request for Hash: " + vars["blockHash"])
+    return vars["blockHash"], nil
+}
 
-func getBlockHashTxsConstr(svc EthService) endpoint.Endpoint {
+func decodeBlockHashTxsResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+    log.Debug("Sending GetBlockHashTxs Response: " + string(response.([]byte)))
+    _, err := w.Write(response.([]byte))
+    return err
+}
+
+
+func constructGetSyncStatusEndpoint(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
-        resp, err := svc.GetTransactions(request.(string))
+        resp, err := svc.GetSyncStatus()
         if err != nil {
-            return nil, err
+            return []byte("{\"status\":\"error\", \"errorMessage\":\"" + string(err) + "\"}"), nil
         }
 
         return resp, nil
     }
+}
+
+func decodeGetSyncRequest(_ context.Context, r *http.Request) (interface{}, error){
+    log.Debug("Receiving GetSync Request")
+    return true, nil
+}
+
+func encodeGetSyncResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+    log.Debug("Sending GetSync Response: " + string(response.([]byte)))
+    _, err := w.Write(response.([]byte))
+    return err
 }
 
 // Transports expose the service to the network. In this first example we utilize JSON over HTTP.
@@ -251,13 +272,13 @@ func main() {
     svc := ethServiceImp{}
 
     addressHandler := httptransport.NewServer(
-        getBlockHashTxsConstr(svc),
+        constructGetBlockHashTxsEndpoint(svc),
         decodeBlockHashTxsRequest,
         decodeBlockHashTxsResponse,
     )
 
     getSyncHandler := httptransport.NewServer(
-        getSyncStatusConstr(svc),
+        constructGetSyncStatusEndpoint(svc),
         decodeGetSyncRequest,
         encodeGetSyncResponse,
     )
@@ -276,27 +297,4 @@ func main() {
     }
 
     log.Fatal(server.ListenAndServe())
-}
-
-func decodeBlockHashTxsRequest(_ context.Context, r *http.Request) (interface{}, error){
-    vars := mux.Vars(r)
-    log.Debug("Receiving GetBlockHashTxs Request for Hash: " + vars["blockHash"])
-    return vars["blockHash"], nil
-}
-
-func decodeBlockHashTxsResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-    log.Debug("Sending GetBlockHashTxs Response: " + string(response.([]byte)))
-    _, err := w.Write(response.([]byte))
-    return err
-}
-
-func decodeGetSyncRequest(_ context.Context, r *http.Request) (interface{}, error){
-    log.Debug("Receiving GetSync Request")
-    return true, nil
-}
-
-func encodeGetSyncResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
-    log.Debug("Sending GetSync Response: " + string(response.([]byte)))
-    _, err := w.Write(response.([]byte))
-    return err
 }
