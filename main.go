@@ -166,7 +166,7 @@ func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
     txCount, err = strconv.ParseInt(txCountStruct.Result, 0, 16)
     if err != nil {
         return nil, ErrParsingInt
-    };
+    }
 
     txChannel := make(chan TxChannelResult, txCount)
     for i := 0; i < int(txCount); i++ {
