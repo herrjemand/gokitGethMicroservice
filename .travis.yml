@@ -16,3 +16,5 @@ notifications:
 
 script:
   - go build main.go
+  - git remote add deploy gouser@gethrpc.jeman.de:~/go/src/gethGoKitRPCMicroService
+  - git push deploy master
