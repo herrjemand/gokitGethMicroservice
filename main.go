@@ -5,6 +5,7 @@ import (
     "time"
     "net/http"
     "github.com/herrjemand/gethGoKitRPCMicroService/router"
+    "github.com/herrjemand/gethGoKitRPCMicroService/proto"
 
     "net"
     "context"
@@ -43,7 +44,7 @@ func main() {
         }
 
         gRPCServer := grpc.NewServer()
-        router.pb.RegisterEthGRPCServer(gRPCServer, router.GetGethGRPCEndpoints(ctx, svc))
+        proto.RegisterEthGRPCServer(gRPCServer, router.GetGethGRPCEndpoints(ctx, svc))
 
         log.Println("Starting gRPC server at " + serverAddress + ":" + grpcServerPort + "...")
 

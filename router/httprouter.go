@@ -71,17 +71,15 @@ func encodeGetSyncResponseHTTP(_ context.Context, w http.ResponseWriter, respons
     return err
 }
 
-func GenerateHTTPRouter() interface{} {
-    svc := ethServiceImp{}
-
+func GenerateHTTPRouter(ethService EthService) interface{} {
     addressHandler := httptransport.NewServer(
-        constructGetBlockHashTxsEndpointHTTP(svc),
+        constructGetBlockHashTxsEndpointHTTP(ethService),
         decodeBlockHashTxsRequestHTTP,
         decodeBlockHashTxsResponseHTTP,
     )
 
     getSyncHandler := httptransport.NewServer(
-        constructGetSyncStatusEndpointHTTP(svc),
+        constructGetSyncStatusEndpointHTTP(ethService),
         decodeGetSyncRequestHTTP,
         encodeGetSyncResponseHTTP,
     )
