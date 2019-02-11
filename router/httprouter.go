@@ -14,7 +14,7 @@ func generateErrorResponse(errorMessage string) ([]byte) {
     return []byte("{\"status\":\"error\", \"errorMessage\":\"" + errorMessage + "\"}")
 }
 
-func constructGetBlockHashTxsEndpoint(svc EthService) endpoint.Endpoint {
+func constructGetBlockHashTxsEndpointHTTP(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
         result, err := svc.GetTransactions(request.(string))
         if err != nil {
@@ -31,19 +31,19 @@ func constructGetBlockHashTxsEndpoint(svc EthService) endpoint.Endpoint {
     }
 }
 
-func decodeBlockHashTxsRequest(_ context.Context, r *http.Request) (interface{}, error){
+func decodeBlockHashTxsRequestHTTP(_ context.Context, r *http.Request) (interface{}, error){
     vars := mux.Vars(r)
     log.Println("Receiving GetBlockHashTxs Request for Hash: " + vars["blockHash"])
     return vars["blockHash"], nil
 }
 
-func decodeBlockHashTxsResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func decodeBlockHashTxsResponseHTTP(_ context.Context, w http.ResponseWriter, response interface{}) error {
     log.Println("Sending GetBlockHashTxs Response: " + string(response.([]byte)))
     _, err := w.Write(response.([]byte))
     return err
 }
 
-func constructGetSyncStatusEndpoint(svc EthService) endpoint.Endpoint {
+func constructGetSyncStatusEndpointHTTP(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
         result, err := svc.GetSyncStatus()
         if err != nil {
@@ -60,12 +60,12 @@ func constructGetSyncStatusEndpoint(svc EthService) endpoint.Endpoint {
     }
 }
 
-func decodeGetSyncRequest(_ context.Context, r *http.Request) (interface{}, error){
+func decodeGetSyncRequestHTTP(_ context.Context, r *http.Request) (interface{}, error){
     log.Println("Receiving GetSync Request")
     return true, nil
 }
 
-func encodeGetSyncResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func encodeGetSyncResponseHTTP(_ context.Context, w http.ResponseWriter, response interface{}) error {
     log.Println("Sending GetSync Response: " + string(response.([]byte)))
     _, err := w.Write(response.([]byte))
     return err
@@ -75,15 +75,15 @@ func GenerateHTTPRouter() interface{} {
     svc := ethServiceImp{}
 
     addressHandler := httptransport.NewServer(
-        constructGetBlockHashTxsEndpoint(svc),
-        decodeBlockHashTxsRequest,
-        decodeBlockHashTxsResponse,
+        constructGetBlockHashTxsEndpointHTTP(svc),
+        decodeBlockHashTxsRequestHTTP,
+        decodeBlockHashTxsResponseHTTP,
     )
 
     getSyncHandler := httptransport.NewServer(
-        constructGetSyncStatusEndpoint(svc),
-        decodeGetSyncRequest,
-        encodeGetSyncResponse,
+        constructGetSyncStatusEndpointHTTP(svc),
+        decodeGetSyncRequestHTTP,
+        encodeGetSyncResponseHTTP,
     )
 
     router := mux.NewRouter()
