@@ -1,8 +1,7 @@
+syntax = "proto3";
 package main;
 
-syntax = "proto3";
-
-service GetSync {
+service EthGRPC {
     rpc GetSync(GetSyncRequest) returns (GetSyncResponse);
     rpc GetTxsForBlockHash(GetTxsForBlockHashRequest) returns (GetTxsForBlockHashResponse);
 }
@@ -18,7 +17,7 @@ message GetSyncResponse {
 
 
 message GetTxsForBlockHashRequest {
-    string blockHash;
+    string blockHash = 1;
 }
 
 message Transaction {
