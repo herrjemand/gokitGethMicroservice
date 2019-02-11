@@ -1,0 +1,50 @@
+syntax = "proto3";
+package proto;
+
+message GetSyncRequest {
+}
+
+message SyncInfo {
+    string startingBlock = 1;
+    string currentBlock = 2;
+    string highestBlock = 3;
+}
+
+message GetSyncResponse {
+
+    string status = 1;
+    string errorMessage = 2;
+    SyncInfo syncInfo = 3;
+
+}
+message GetTxsForBlockHashRequest {
+    string blockHash = 1;
+}
+
+message Transaction {
+    string blockHash = 1;
+    string blockNumber = 2;
+    string from = 3;
+    string gas = 4;
+    string gasPrice = 5;
+    string hash = 6;
+    string input = 7;
+    string nonce = 8;
+    string to = 9;
+    string transactionIndex = 10;
+    string value = 11;
+    string v = 12;
+    string r = 13;
+    string s = 14;
+}
+
+message GetTxsForBlockHashResponse {
+    string status = 1;
+    string errorMessage = 2;
+    repeated Transaction transactions = 3;
+}
+
+service EthGRPC {
+    rpc GetSync(GetSyncRequest) returns (GetSyncResponse);
+    rpc GetTxsForBlockHash(GetTxsForBlockHashRequest) returns (GetTxsForBlockHashResponse);
+}
