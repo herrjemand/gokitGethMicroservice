@@ -13,4 +13,4 @@
 #  
 # Borrowed from https://github.com/go-kit/kit/blob/master/examples/addsvc/pb/compile.sh
 
-protoc ethgrpc.proto --go_out=plugins=grpc:../router
+protoc ethgrpc.proto --go_out=plugins=grpc:.

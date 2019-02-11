@@ -4,86 +4,86 @@ import (
     "context"
 
     gt "github.com/go-kit/kit/transport/grpc"
-
-    "grpc-go-kit-example/product-service/pb"
+    "github.com/herrjemand/gethGoKitRPCMicroService/proto"
 )
 
+type GetSyncResponse struct{
+    Status string
+    ErrorMessage string
+    SyncInfo BlockSyncProgress
+}
 
-// func EncodeProductResponse(_ context.Context, r interface{}) (interface{}, error) {
-//     res := r.(ProductResponse)
-//     return &pb.ProductResponse{
-//         res.ID,
-//         res.Name,
-//     }, nil
-// }
+type GetBlockHashTxsResponse struct{
+    Status string
+    ErrorMessage string
+    Txs []Transaction
+}
 
-// func DecodeGetProductRequest(_ context.Context, r interface{}) (interface{}, error) {
-//     req := r.(*pb.GetProductRequest)
-//     return GetProductRequest{req.Id}, nil
-// }
+type GetBlockHashTxsRequest struct{
+    BlockHash string
+}
 
-// func DecodeCreateProductRequest(_ context.Context, r interface{}) (interface{}, error) {
-//     req := r.(*pb.CreateProductRequest)
-//     return CreateProductRequest{req.Name}, nil
-// }
-
-// type GRPCServer struct {
-//     getSync       gt.Handler
-//     createProduct gt.Handler
-// }
-
-// func (s *GRPCServer) GetProduct(ctx context.Context, req *pb.GetProductRequest) (*pb.ProductResponse, error) {
-//     _, resp, err := s.getProduct.ServeGRPC(ctx, req)
-//     if err != nil {
-//         return nil, err
-//     }
-//     return resp.(*pb.ProductResponse), nil
-// }
-
-// func (s *GRPCServer) CreateProduct(ctx context.Context, req *pb.CreateProductRequest) (*pb.ProductResponse, error) {
-//     _, resp, err := s.createProduct.ServeGRPC(ctx, req)
-//     if err != nil {
-//         return nil, err
-//     }
-//     return resp.(*pb.ProductResponse), nil
-// }
 
 func constructGetSyncEndpointGPRC(svc EthService) endpoint.Endpoint {
-    return func(_ context.Context, request interface{}) (interface{}, error) {
-        gr := req.(GetProductRequest)
-        product, _ := svc.GetProduct(gr.ID)
-        return ProductResponse{product.ID, product.Name}, nil
+    return func(_ context.Context, _ interface{}) (interface{}, error) {
+        result, err := svc.GetSyncStatus()
+        if err != nil {
+            return GetSyncResponse{"failed", err.Error()}, nil
+        }
+
+        return GetSyncResponse{"ok", "", result.(BlockSyncProgress)}, nil
     }
 }
 
-func constructGetSyncStatusEndpointHTTP(svc EthService) endpoint.Endpoint {
+func decodeGetSyncRequest(_ context.Context, _ interface{}) (interface{}, error) {
+    return true, nil
+}
+
+func encodeGetSyncResponse(_ context.Context, result interface{}) (interface{}, error) {
+    res := r.(GetSyncResponse)
+    return &proto.GetSyncResponse{
+        res.Status,
+        res.ErrorMessage,
+        res.SyncInfo,
+    }, nil
+}
+
+func constructGetBlockHashTxsEndpointGRPC(svc EthService) endpoint.Endpoint {
     return func(_ context.Context, request interface{}) (interface{}, error) {
-        result, err := svc.GetSyncStatus()
+        result, err := svc.GetTransactions(request.(string))
         if err != nil {
-            return generateErrorResponse(err.Error()), nil
+            return GetBlockHashTxsResponse{"failed", err.Error()}, nil
         }
 
-        var jsonData []byte
-        jsonData, err = json.Marshal(result.(BlockSyncProgress))
-        if err != nil {
-            return generateErrorResponse(ErrEncodingJSON.Error()), nil
-        }
-
-        return jsonData, nil
+        return GetBlockHashTxsResponse{"ok", "", result.(TransactionResultsResponse).Transactions}, nil
     }
+}
+
+func decodeCGetBlockHashTxsRequest(_ context.Context, r interface{}) (interface{}, error) {
+    req := r.(*proto.GetTxsForBlockHashRequest)
+    return req.BlockHash, nil
+}
+
+func encodeGetBlockHashTxsResponse(_ context.Context, result interface{}) (interface{}, error) {
+    res := r.(GetSyncResponse)
+    return &proto.GetTxsForBlockHashResponse{
+        res.Status,
+        res.ErrorMessage,
+        res.SyncInfo,
+    }, nil
 }
 
 func GetGethGRPCEndpoints(_ context.Context, ethService EthService) EthGRPCServer {
     return &GRPCServer{
         getSync: gt.NewServer(
             constructGetSyncEndpointGPRC(ethService),
-            DecodeGetProductRequest,
-            EncodeProductResponse,
+            decodeGetSyncRequest,
+            encodeGetSyncResponse,
         ),
         createProduct: gt.NewServer(
-            product.MakeCreateProductEndpoint(ethService),
-            DecodeCreateProductRequest,
-            EncodeProductResponse,
+            constructGetBlockHashTxsEndpointHTTP(ethService),
+            decodeCreateProductRequest,
+            encodeGetBlockHashTxsResponse,
         ),
     }
 }
