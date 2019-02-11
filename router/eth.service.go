@@ -118,9 +118,9 @@ func callGethRPC (rpcStruct EthRPCRequest) (interface{}, error) {
     return respBytes, nil
 }
 
-type ethServiceImp struct{}
+type EthServiceImp struct{}
 
-func (ethServiceImp) GetSyncStatus() (interface{}, error) {
+func (EthServiceImp) GetSyncStatus() (interface{}, error) {
     rpcReq := EthRPCRequest{}
 
     rpcReq.constructGetSyncingRequest()
@@ -140,7 +140,7 @@ func (ethServiceImp) GetSyncStatus() (interface{}, error) {
     return getSyncResp.Result, nil
 }
 
-func (ethServiceImp) GetTransactions(blockHash string) (interface{}, error) {
+func (EthServiceImp) GetTransactions(blockHash string) (interface{}, error) {
     rpcReq := EthRPCRequest{}
 
     // Getting transaction count
