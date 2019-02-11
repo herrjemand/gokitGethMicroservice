@@ -1,6 +1,5 @@
-package main;
-
 syntax = "proto3";
+package main;
 
 message GetSyncRequest {
 }
@@ -13,7 +12,7 @@ message GetSyncResponse {
 
 
 message GetTxsForBlockHashRequest {
-    string blockHash;
+    string blockHash = 1;
 }
 
 message Transaction {
